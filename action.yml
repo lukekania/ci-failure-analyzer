@@ -1,0 +1,9 @@
+name: "CI Failure Explainer"
+description: "Summarize CI failures into a readable explanation"
+inputs:
+  github_token:
+    description: "GITHUB_TOKEN"
+    required: true
+runs:
+  using: "node20"
+  main: "dist/index.js"
