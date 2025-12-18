@@ -1,4 +1,4 @@
-name: "CI Failure Explainer"
+name: "Explain CI Failure"
 description: "Summarize CI failures into a readable explanation"
 inputs:
   github_token:

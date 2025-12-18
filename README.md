@@ -1,4 +1,4 @@
-# CI Failure Explainer
+# Explain CI Failure
 
 CI Failure Explainer is a small GitHub Action that turns noisy CI logs into a human-readable failure summary.
 

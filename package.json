@@ -1,5 +1,5 @@
 {
-  "name": "ci-failure-explainer",
+  "name": "explain-ci-failure",
   "private": true,
   "scripts": {
     "build": "ncc build index.js -o dist"
