@@ -28,6 +28,14 @@ inputs:
     description: "JSON array of custom rules: [{\"name\": \"MyLinter\", \"pattern\": \"my-lint-error\", \"hint\": \"Run my-lint --fix\"}]"
     required: false
     default: ""
+  flaky_detection:
+    description: "Check recent runs to detect likely flaky tests"
+    required: false
+    default: "false"
+  flaky_lookback:
+    description: "Number of recent workflow runs to check for flaky detection"
+    required: false
+    default: "10"
 outputs:
   failures_json:
     description: "JSON array of failure details (when json_output is enabled)"

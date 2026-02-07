@@ -36549,6 +36549,41 @@ async function findPatternIssue(octokit, { owner, repo, hash, label }) {
   return null;
 }
 
+// -------------------- Flaky detection --------------------
+
+function clampInt(val, def, min, max) {
+  const n = parseInt(String(val ?? def), 10);
+  if (!Number.isFinite(n)) return def;
+  return Math.max(min, Math.min(max, n));
+}
+
+async function detectFlaky(octokit, { owner, repo, workflowId, jobName, lookback }) {
+  // Fetch recent runs for the same workflow
+  const params = { owner, repo, per_page: lookback, status: "completed" };
+  if (workflowId) params.workflow_id = workflowId;
+
+  const runs = await octokit.rest.actions.listWorkflowRunsForRepo(params);
+
+  let passes = 0;
+  let failures = 0;
+
+  for (const run of runs.data.workflow_runs.slice(0, lookback)) {
+    const jobsResp = await octokit.rest.actions.listJobsForWorkflowRun({
+      owner, repo, run_id: run.id, per_page: 100
+    });
+
+    const matchingJob = jobsResp.data.jobs.find((j) => j.name === jobName);
+    if (!matchingJob) continue;
+
+    if (matchingJob.conclusion === "success") passes++;
+    else if (matchingJob.conclusion === "failure") failures++;
+  }
+
+  // Flaky = fails sometimes and passes sometimes in recent history
+  const isFlaky = passes >= 2 && failures >= 2;
+  return { isFlaky, passes, failures, total: passes + failures };
+}
+
 // -------------------- PR comment --------------------
 
 async function getRunContext(octokit) {
@@ -36607,6 +36642,8 @@ async function run() {
     const patternLabel = core.getInput("pattern_label") || "ci-failure-pattern";
     const runbookUrl = (core.getInput("runbook_url") || "").replace(/\/+$/, "");
     const customRules = parseCustomRules(core.getInput("custom_rules"));
+    const flakyDetection = toBool(core.getInput("flaky_detection"), false);
+    const flakyLookback = clampInt(core.getInput("flaky_lookback"), 10, 3, 30);
 
     const octokit = github.getOctokit(token);
     const { owner, repo, runId, prNumbers } = await getRunContext(octokit);
@@ -36690,6 +36727,23 @@ async function run() {
         }
       }
 
+      let flakyNote = "";
+      if (flakyDetection) {
+        try {
+          const flakyResult = await detectFlaky(octokit, {
+            owner, repo, workflowId: null, jobName: job.name, lookback: flakyLookback
+          });
+          if (flakyResult.isFlaky) {
+            const msg = `Likely flaky (${flakyResult.failures}/${flakyResult.total} recent runs failed)`;
+            appendStepSummary(`- **${msg}**\n`);
+            flakyNote = `- **${msg}**\n`;
+            core.warning(`${job.name}: ${msg}`);
+          }
+        } catch {
+          // flaky detection is best-effort
+        }
+      }
+
       appendStepSummary(`- Context:${codeBlock(excerpt)}\n`);
 
       let partBlock =
@@ -36704,6 +36758,7 @@ async function run() {
         const slug = RUNBOOK_SLUGS[hit.rule] || hit.rule.toLowerCase().replace(/[^a-z0-9]+/g, "-");
         partBlock += `- [Runbook](${runbookUrl}/${slug})\n`;
       }
+      partBlock += flakyNote;
       summaryParts.push(partBlock);
 
       if (jsonOutput) {
@@ -36713,7 +36768,8 @@ async function run() {
           errorType: hit.rule,
           error: normalized,
           hint: primaryHint,
-          context: excerpt
+          context: excerpt,
+          flakyNote: flakyNote ? flakyNote.trim() : ""
         });
       }
 
