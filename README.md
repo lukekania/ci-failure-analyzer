@@ -109,7 +109,6 @@ If no rule matches, the action falls back to a generic error detector.
 
 ## Possible Future Features
 
-- Reviewer suggestions based on failing files
 - Deploy-risk correlation
 - Time-to-fix metrics per error type
 

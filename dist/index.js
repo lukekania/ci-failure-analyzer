@@ -36584,6 +36584,52 @@ async function detectFlaky(octokit, { owner, repo, workflowId, jobName, lookback
   return { isFlaky, passes, failures, total: passes + failures };
 }
 
+// -------------------- Reviewer suggestions --------------------
+
+function extractFilePaths(errorLine, excerpt) {
+  // Extract file paths from error lines (e.g., src/foo.ts:42:10, ./src/bar.js)
+  const pathRe = /(?:^|\s|['"`])((?:\.\/)?(?:[\w.-]+\/)*[\w.-]+\.[a-zA-Z]{1,5})(?::\d+)?/g;
+  const paths = new Set();
+  const sources = [errorLine, ...(excerpt || [])];
+
+  for (const line of sources) {
+    let m;
+    while ((m = pathRe.exec(line || "")) !== null) {
+      const p = m[1].replace(/^\.\//, "");
+      // skip common non-file patterns
+      if (!/\.(js|ts|jsx|tsx|py|go|java|rb|rs|css|scss|vue|svelte)$/i.test(p)) continue;
+      paths.add(p);
+    }
+  }
+
+  return [...paths].slice(0, 5);
+}
+
+async function suggestReviewersForFiles(octokit, { owner, repo, filePaths, prAuthor }) {
+  const authorCounts = new Map();
+
+  for (const filePath of filePaths) {
+    try {
+      const commits = await octokit.rest.repos.listCommits({
+        owner, repo, path: filePath, per_page: 10
+      });
+
+      for (const c of commits.data) {
+        const login = c.author?.login;
+        if (!login || login === prAuthor || login.includes("[bot]")) continue;
+        authorCounts.set(login, (authorCounts.get(login) || 0) + 1);
+      }
+    } catch {
+      // file may not exist in default branch
+    }
+  }
+
+  return [...authorCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([login, commits]) => ({ login, commits }));
+}
+
 // -------------------- PR comment --------------------
 
 async function getRunContext(octokit) {
@@ -36644,6 +36690,7 @@ async function run() {
     const customRules = parseCustomRules(core.getInput("custom_rules"));
     const flakyDetection = toBool(core.getInput("flaky_detection"), false);
     const flakyLookback = clampInt(core.getInput("flaky_lookback"), 10, 3, 30);
+    const suggestReviewers = toBool(core.getInput("suggest_reviewers"), false);
 
     const octokit = github.getOctokit(token);
     const { owner, repo, runId, prNumbers } = await getRunContext(octokit);
@@ -36744,6 +36791,24 @@ async function run() {
         }
       }
 
+      let reviewerNote = "";
+      if (suggestReviewers) {
+        try {
+          const filePaths = extractFilePaths(hit.line, hit.excerpt);
+          if (filePaths.length > 0) {
+            const prAuthor = github.context.payload?.pull_request?.user?.login || "";
+            const suggestions = await suggestReviewersForFiles(octokit, { owner, repo, filePaths, prAuthor });
+            if (suggestions.length > 0) {
+              const names = suggestions.map((s) => `@${s.login} (${s.commits} commits)`).join(", ");
+              appendStepSummary(`- Suggested reviewers: ${names}\n`);
+              reviewerNote = `- Suggested reviewers: ${names}\n`;
+            }
+          }
+        } catch {
+          // reviewer suggestion is best-effort
+        }
+      }
+
       appendStepSummary(`- Context:${codeBlock(excerpt)}\n`);
 
       let partBlock =
@@ -36759,6 +36824,7 @@ async function run() {
         partBlock += `- [Runbook](${runbookUrl}/${slug})\n`;
       }
       partBlock += flakyNote;
+      partBlock += reviewerNote;
       summaryParts.push(partBlock);
 
       if (jsonOutput) {
