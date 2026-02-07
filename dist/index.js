@@ -36153,6 +36153,10 @@ const RUNBOOK_SLUGS = {
   "ruff/flake8": "ruff",
   pip: "pip",
   Go: "go",
+  Java: "java",
+  Maven: "maven",
+  Gradle: "gradle",
+  JUnit: "junit",
   Generic: "generic"
 };
 
@@ -36300,6 +36304,23 @@ function pickFirstMeaningfulError(lines) {
     { name: "Go", re: /cannot find package/i },
     { name: "Go", re: /\bundefined:/i },
 
+    // Java: compilation
+    { name: "Java", re: /error:\s+.*java/i },
+    { name: "Java", re: /\bjavac\b.*error/i },
+    { name: "Java", re: /COMPILATION ERROR/i },
+
+    // Java: Maven
+    { name: "Maven", re: /\[ERROR\].*BUILD FAILURE/i },
+    { name: "Maven", re: /\[ERROR\].*Failed to execute goal/i },
+
+    // Java: Gradle
+    { name: "Gradle", re: /FAILURE: Build failed/i },
+    { name: "Gradle", re: /Execution failed for task/i },
+
+    // Java: JUnit
+    { name: "JUnit", re: /Tests run:.*Failures: [1-9]/i },
+    { name: "JUnit", re: /\bFAILURE!\b.*Tests run/i },
+
     // Generic JS runtime errors (keep late to avoid noise)
     { name: "Node", re: /\b(TypeError|ReferenceError|SyntaxError)\b/ },
     { name: "Node", re: /\bUnhandledPromiseRejection\b|\bUnhandled rejection\b/i }
@@ -36373,6 +36394,22 @@ function hintFor(ruleName) {
     Go: [
       "Run `go test ./...` locally to reproduce the failure.",
       "For build errors, check `go.mod` / `go.sum` and run `go mod tidy`."
+    ],
+    Java: [
+      "Check the referenced file/line for the compilation error; fix type mismatches or missing imports.",
+      "Verify Java version compatibility between source and CI environment."
+    ],
+    Maven: [
+      "Run `mvn clean install` locally to reproduce; check dependency resolution and plugin versions.",
+      "If it's a dependency issue, run `mvn dependency:tree` to identify conflicts."
+    ],
+    Gradle: [
+      "Run the failing task locally with `--stacktrace` for details.",
+      "Check Gradle wrapper version and dependency resolution in `build.gradle`."
+    ],
+    JUnit: [
+      "Run the failing test class locally; focus on the first assertion failure.",
+      "Check for test order dependencies and shared state between tests."
     ],
     Node: [
       "Find the first stack trace frame pointing to your code; earlier frames are often library internals.",

@@ -88,6 +88,7 @@ Currently optimized for common CI stacks:
 - Generic Node.js runtime errors
 - pytest / mypy / ruff / flake8 / pip (Python)
 - go test / golangci-lint / go build (Go)
+- javac / Maven / Gradle / JUnit (Java)
 
 If no rule matches, the action falls back to a generic error detector.
 
@@ -113,7 +114,6 @@ If no rule matches, the action falls back to a generic error detector.
 - Reviewer suggestions based on failing files
 - Deploy-risk correlation
 - Time-to-fix metrics per error type
-- Support for additional stacks (Java)
 
 ## Why This Exists
 
