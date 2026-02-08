@@ -1,9 +1,11 @@
-name: "Explain CI Failure"
-description: "Summarize CI failures into a readable explanation"
+name: "CI Failure Analyzer"
+description: "Explain CI failures and optionally track recurring failure patterns via GitHub Issues"
 inputs:
   github_token:
     description: "GITHUB_TOKEN"
     required: true
+
+  # Detection
   comment_on_pr:
     description: "Post failure summary as a PR comment"
     required: false
@@ -12,20 +14,12 @@ inputs:
     description: "Export failures as JSON via the failures_json output"
     required: false
     default: "false"
-  check_patterns:
-    description: "Check if errors match known failure patterns tracked in GitHub Issues"
-    required: false
-    default: "false"
-  pattern_label:
-    description: "Label used to find pattern-tracking issues"
-    required: false
-    default: "ci-failure-pattern"
   runbook_url:
     description: "Base URL for runbook links (e.g., https://wiki.example.com/runbooks)"
     required: false
     default: ""
   custom_rules:
-    description: "JSON array of custom rules: [{\"name\": \"MyLinter\", \"pattern\": \"my-lint-error\", \"hint\": \"Run my-lint --fix\"}]"
+    description: 'JSON array of custom rules: [{"name": "MyLinter", "pattern": "my-lint-error", "hint": "Run my-lint --fix"}]'
     required: false
     default: ""
   flaky_detection:
@@ -44,9 +38,56 @@ inputs:
     description: "Show deploy-risk level based on failure type"
     required: false
     default: "false"
+  max_failed_jobs:
+    description: "Maximum number of failed jobs to analyze"
+    required: false
+    default: "5"
+
+  # Pattern tracking
+  track_patterns:
+    description: "Track recurring failure patterns as GitHub Issues"
+    required: false
+    default: "false"
+  issue_repo:
+    description: "Repo to store pattern issues (owner/repo format, defaults to current repo)"
+    required: false
+    default: ""
+  issue_label:
+    description: "Label applied to pattern-tracking issues"
+    required: false
+    default: "ci-failure-pattern"
+  quiet_days:
+    description: "Auto-close pattern issues with no occurrences for this many days (0 = disabled)"
+    required: false
+    default: "0"
+  export_json:
+    description: "Export all tracked patterns as JSON via the patterns_json output"
+    required: false
+    default: "false"
+  notify_threshold:
+    description: "Label issue and emit warning when occurrence count reaches this value (0 = disabled)"
+    required: false
+    default: "0"
+
+  # Deprecated aliases (kept for backwards compatibility)
+  check_patterns:
+    description: "Deprecated: use track_patterns instead"
+    required: false
+    default: "false"
+  pattern_label:
+    description: "Deprecated: use issue_label instead"
+    required: false
+    default: ""
+  explainer_context:
+    description: "Additional context to include in pattern issues (kept for external use)"
+    required: false
+    default: ""
+
 outputs:
   failures_json:
     description: "JSON array of failure details (when json_output is enabled)"
+  patterns_json:
+    description: "JSON array of all tracked failure patterns (when export_json is enabled)"
 runs:
   using: "node20"
   main: "dist/index.js"

@@ -1,11 +1,8 @@
 {
-  "name": "explain-ci-failure",
+  "name": "ci-failure-analyzer",
   "private": true,
-  "scripts": {
-    "build": "ncc build index.js -o dist"
-  },
+  "version": "1.0.0",
   "type": "commonjs",
-  "version": "0.2.0",
   "dependencies": {
     "@actions/core": "^2.0.3",
     "@actions/github": "^6.0.1",
@@ -13,5 +10,8 @@
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4"
+  },
+  "scripts": {
+    "build": "ncc build index.js -o dist"
   }
 }
