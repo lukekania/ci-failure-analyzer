@@ -1,11 +1,11 @@
-const core = require("@actions/core");
-const github = require("@actions/github");
-const fs = require("fs");
+import * as core from "@actions/core";
+import * as github from "@actions/github";
+import fs from "fs";
 
-const { toBool, clampInt, sha1, normalize, codeBlock, upsertComment, getRunContext } = require("./lib/utils");
-const { downloadJobLogs, extractTextFilesFromZip } = require("./lib/log-downloader");
-const { RUNBOOK_SLUGS, parseCustomRules, hintFor, getDeployRisk, detectFlaky, extractFilePaths, suggestReviewersForFiles, computeTimeToFix, formatFixTime, findFirstErrorInText, findFirstErrorAcrossTexts } = require("./lib/error-detector");
-const { upsertIssueForSignature, autoCloseQuietIssues, exportPatternsAsJson } = require("./lib/pattern-tracker");
+import { toBool, clampInt, sha1, normalize, codeBlock, upsertComment, getRunContext } from "./lib/utils.js";
+import { downloadJobLogs, extractTextFilesFromZip } from "./lib/log-downloader.js";
+import { RUNBOOK_SLUGS, parseCustomRules, hintFor, getDeployRisk, detectFlaky, extractFilePaths, suggestReviewersForFiles, computeTimeToFix, formatFixTime, findFirstErrorInText, findFirstErrorAcrossTexts } from "./lib/error-detector.js";
+import { upsertIssueForSignature, autoCloseQuietIssues, exportPatternsAsJson } from "./lib/pattern-tracker.js";
 
 const MARKER = "<!-- ci-failure-analyzer:v0 -->";
 

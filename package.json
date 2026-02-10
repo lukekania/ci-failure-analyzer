@@ -2,7 +2,7 @@
   "name": "ci-failure-analyzer",
   "private": true,
   "version": "1.0.0",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "@actions/core": "^3.0.0",
     "@actions/github": "^9.0.0",
